@@ -1,0 +1,2 @@
+# KGE_literature_relevance_assessment
+This repository focuses on the RELISH Corpus to identify relevancy of a given pair of PubMed papers. The approach uses various knowledge graph embedding (KGE) models such as TransE, RotatE and ConvE, to train entitiy embeddings which are used to computes a semantic closeness between two documents. The script includes the knowledge graph construction pipeline, which uses OpenAlex API to retrieve knowledge bases and then construct knowledge graph triples that are being used as training input for the KGE models.

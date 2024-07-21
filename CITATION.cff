@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using these metadata."
+title: KGE_literature_relevance_assessment
+abstract: "An approach using knowledge graph embeddings from OpenAlex knowledge to explore solutions for a recommender engine on the RELISH corpus."
+authors:
+  - family-names: "Geist"
+    given-names: "Lukas"
+    orcid: "http://orcid.org/0000-0002-2910-7982"
+version: 1.0.0
+license: GPL-3.0-or-later
+repository-code: "https://github.com/zbmed-semtec/KGE_literature_relevance_assessment.git"
