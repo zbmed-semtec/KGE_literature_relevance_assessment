@@ -2,6 +2,7 @@ import requests
 import pandas as pd
 import json
 import argparse
+import os
 
 
 def get_unique_pmids(relish_pmids_tsv: str, pmids_output: str):
@@ -24,7 +25,10 @@ def retrieve_knowledge_base(pmids_json: str, kb_output: str, breakpoint_iteratio
         pmids = json.load(f)
     pmids_chunks = [pmids[i:i + 100] for i in range(0, len(pmids), 100)]
     iteration = 0
-    full_RELISH_JSON_LIST = {}
+    full_RELISH_JSON = {}
+    missing_count = 0
+    if not os.path.exists("data/chunks"):
+        os.makedirs("data/chunks")
     for chunk in pmids_chunks:
         if breakpoint_iteration <= iteration:
             api_string = "https://api.openalex.org/works?filter=pmid:"
@@ -39,7 +43,7 @@ def retrieve_knowledge_base(pmids_json: str, kb_output: str, breakpoint_iteratio
                 break
             response_json = response.json()
             for article in response_json["results"]:
-                full_RELISH_JSON_LIST[article["ids"]["pmid"].split(
+                full_RELISH_JSON[article["ids"]["pmid"].split(
                     "https://pubmed.ncbi.nlm.nih.gov/")[1]] = article
             with open(f"data/chunks/OPENALEX{iteration}.json", 'w') as out:
                 json.dump(response_json, out)
@@ -47,13 +51,24 @@ def retrieve_knowledge_base(pmids_json: str, kb_output: str, breakpoint_iteratio
             with open(f"data/chunks/OPENALEX{iteration}.json", 'w') as old_file:
                 old_json = json.load(old_file)
                 for article in old_json["results"]:
-                    full_RELISH_JSON_LIST[article["ids"]["pmid"].split(
+                    full_RELISH_JSON[article["ids"]["pmid"].split(
                         "https://pubmed.ncbi.nlm.nih.gov/")[1]] = article
         iteration += 1
         if (iteration % 10 == 0):
             print(f"{iteration}/{len(pmids_chunks)}")
-    with open(f"{kb_output}.json", 'w') as full_file:
-        json.dump(full_RELISH_JSON_LIST, full_file)
+    missing_count_added = 0
+    for pmid in pmids:
+        if str(pmid) not in full_RELISH_JSON:
+            try:
+                response = requests.get(
+                    f"https://api.openalex.org/works/pmid:{pmid}")
+                response_json = response.json()
+                full_RELISH_JSON[pmid] = response_json
+                missing_count_added += 1
+            except:
+                continue
+    with open(f"{kb_output}", 'w') as full_file:
+        json.dump(full_RELISH_JSON, full_file)
 
 
 if __name__ == "__main__":

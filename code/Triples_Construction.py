@@ -1,6 +1,7 @@
 import pandas as pd
 import json
 import argparse
+import os
 
 
 def reduce_nonrelevant_triples_function(triples_df: pd.DataFrame, min_count: int) -> pd.DataFrame:
@@ -27,29 +28,34 @@ def reduce_nonrelevant_triples_function(triples_df: pd.DataFrame, min_count: int
     return df
 
 
-def create_split_triples(knowledge_base_json: str, citation_json: str, triples_chunk_output_directory: str):
+def create_chunked_triples(knowledge_base_json: str, citation_json: str, triples_chunk_output_directory: str, relevance_matrix_tsv: str):
     chunks = []
     kb = {}
     triples = set()
     citations = {}
-
-    relevance_matrix = pd.read_csv(relevance_matrix, sep='\t', header=None)
+    relevance_matrix = pd.read_csv(relevance_matrix_tsv, sep='\t')
     relevance_matrix = relevance_matrix.astype(str)
     last_pmid = ""
-
     keywords_count = 0
     authors = 0
-
+    if not os.path.exists(triples_chunk_output_directory):
+        os.makedirs(triples_chunk_output_directory)
     chunk = []
-    for index, row in relevance_matrix.iterrows():
+    iteration = 0
+    seedPMIDList = list(relevance_matrix["PMID1"])
+    secondPMIDList = list(relevance_matrix["PMID1"])
+    counter = 0
+    for index in range(len(seedPMIDList)):
         if (last_pmid == ""):
-            last_pmid = row[0]
-            chunk.append(row[0])
-        elif (last_pmid != row[0]):
-            last_pmid = row[0]
+            last_pmid = seedPMIDList[index]
+            chunk.append(seedPMIDList[index])
+        elif (last_pmid != seedPMIDList[index]):
+            print(f"{last_pmid} | {seedPMIDList[index]}")
+            counter += 1
+            last_pmid = seedPMIDList[index]
             chunks.append(chunk)
             chunk = []
-        chunk.append(row[1])
+        chunk.append(secondPMIDList[index])
     if (len(chunk) > 0):
         chunks.append(chunk)
 
@@ -57,7 +63,6 @@ def create_split_triples(knowledge_base_json: str, citation_json: str, triples_c
         kb = json.load(f)
     with open(citation_json, 'r') as f:
         citations = json.load(f)
-    iteration = 0
     for current_chunk in chunks:
         triples = set()
         for pmid in current_chunk:
@@ -117,7 +122,7 @@ def create_split_triples(knowledge_base_json: str, citation_json: str, triples_c
         df.to_csv(f"{triples_chunk_output_directory}/Triples{iteration}.tsv",
                   sep='\t', index=False, header=False)
         iteration += 1
-        print(f"{iteration}/{len(chunks)}")
+        # print(f"{iteration}/{len(chunks)}")
 
 
 if __name__ == "__main__":
@@ -126,8 +131,11 @@ if __name__ == "__main__":
                         help="Path for input OpenAlex knowledge base JSON.")
     parser.add_argument('-ic', '--inputCitation', type=str,
                         help="Path for input cited-by JSON.")
+    parser.add_argument('-ir', '--inputRelevanceMatrix', type=str,
+                        help="Input of the three column RELISH PMID pair relevance matrix TSV.")
     parser.add_argument('-o', '--output', type=str,
                         help="Directory path for chunked triples.")
     args = parser.parse_args()
 
-    create_split_triples(args.inputKG, args.inputCitation, args.output)
+    create_chunked_triples(args.inputKG, args.inputCitation,
+                           args.output, args.inputRelevanceMatrix)
